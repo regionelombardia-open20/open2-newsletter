@@ -444,6 +444,17 @@ class MailChimpClient implements ServiceMailDriverInterface
             ];
         }
 
+    public function checkIfSubscriberExist($list_id, $email) {
+        
+    }
+
+    public function getDynamicFields($params) {
+        
+    }
+
+    public function subscribeToList($list_id, $params) {
+        
+    }
 
 }
 

@@ -21,7 +21,7 @@ $this->params['breadcrumbs'][] = $this->title;
         ],
         [
             'class' => \open20\amos\core\views\grid\ActionColumn::className(),
-            'template' => '{view}',
+            'template' => '{templates}{view}',
             'buttons' => [
                 'view' => function($url, $model){
 
@@ -32,7 +32,16 @@ $this->params['breadcrumbs'][] = $this->title;
                                 'title' => \amos\newsletter\Module::t('amosnewsletter', 'Subscribers')
 
                             ]);
-                }
+                },
+                'templates' => function($url, $model){
+                    return \yii\helpers\Html::a(\open20\amos\core\icons\AmosIcons::show('view-web'),
+                        ['/newsletter/service-email/email-templates', 'idList' => $model->idList, 'idGroups' => $model->idGroup],
+                        [
+                            'class' => 'btn btn-navigation-primary',
+                            'title' => \amos\newsletter\Module::t('amosnewsletter', 'Templates')
+                        ]);
+                    return '';
+                },
             ]
         ]
 

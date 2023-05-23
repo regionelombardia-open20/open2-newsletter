@@ -25,8 +25,18 @@ $module = \Yii::$app->getModule('newsletter');
         ],
         [
             'class' => \open20\amos\core\views\grid\ActionColumn::className(),
-            'template' => '{index-groups}{subscribers}',
+            'template' => '{templates}{index-groups}{subscribers}',
             'buttons' => [
+                'templates' => function($url, $model) use ($module){
+                        return \yii\helpers\Html::a(\open20\amos\core\icons\AmosIcons::show('view-web'),
+                            ['/newsletter/service-email/email-templates', 'idList' => $model->IdList],
+                            [
+                                'class' => 'btn btn-navigation-primary',
+                                'title' => \amos\newsletter\Module::t('amosnewsletter', 'Templates')
+
+                            ]);
+                    return '';
+                },
                 'index-groups' => function($url, $model) use ($module){
                     if($module->enableServiceMailGroups) {
                         return \yii\helpers\Html::a(\open20\amos\core\icons\AmosIcons::show('ungroup'),

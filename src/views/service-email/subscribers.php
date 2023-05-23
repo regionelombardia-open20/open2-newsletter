@@ -27,6 +27,20 @@ $columns []=   [
     'attribute' => 'Email',
     'label' => \amos\newsletter\Module::t('amosnewsletter', 'Email')
 ];
+
+$columns [] = [
+    'class' => \open20\amos\core\views\grid\ActionColumn::className(),
+    'template' => '{view}',
+    'buttons' => [
+        'view' => function ($url, $model){
+            return \yii\helpers\Html::a(\open20\amos\core\icons\AmosIcons::show('file'),
+                ['detail-user', 'idRecipient' => $model->idRecipient], [
+                    'class' => 'btn btn-tools-secondary',
+                    'title' => \amos\newsletter\Module::t('amosnewsletter', "View")
+                ]);
+        }
+    ]
+];
 ?>
 <?= \open20\amos\core\views\AmosGridView::widget([
     'dataProvider' => $dataProvider,
