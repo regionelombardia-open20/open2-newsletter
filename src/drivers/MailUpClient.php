@@ -440,7 +440,19 @@ class MailUpClient implements ServiceMailDriverInterface
         return json_decode($result);
     }
 
-
+    /**
+     * @param $group_id
+     * @param $message_id
+     * @param array $params
+     * @return mixed
+     */
+    public function sendSMSToGroup($group_id, $message_id)
+    {
+        $this->oauth2Autentication();
+        $url = Url::toRoute($this->getConsoleEndpoint() . "/Console/Sms/Group/$group_id/Message/$message_id/Send", 'https');
+        $result = $this->callMethod($url, "POST", null, "JSON");
+        return json_decode($result);
+    }
 
     /**
      * @param $message_id
@@ -559,9 +571,10 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param $params
      * @return mixed
      */
-    public function importRecipientsToGroups($users, $group_id, $params = []){
+    public function importRecipientsToGroups($users, $group_id, $params = [], $signedForSMS = false){
+        $forSMS = ($signedForSMS)? "/Sms": "";
         $this->oauth2Autentication();
-        $url = $this->getConsoleEndpoint() . "/Console/Group/$group_id/Recipients";
+        $url = $this->getConsoleEndpoint() . "/Console$forSMS/Group/$group_id/Recipients";
         $encode_data = json_encode($users);
         return json_decode($this->callMethod($url, "POST", $encode_data, "JSON"));
     }
@@ -846,6 +859,109 @@ class MailUpClient implements ServiceMailDriverInterface
         return json_decode($this->callMethod($url, "GET", null, "JSON"));
     }
 
+    /**
+     * @param $idMessage
+     * @param bool $onlyCount
+     * @param array $params
+     * @return mixed
+     */
+    public function getStatisticMessagePages($idMessage)
+    {
+        $this->oauth2Autentication();
+        $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/Pages"], []), 'https');
+        return json_decode($this->callMethod($url, "GET", null, "JSON"));
+    }
+
+    /**
+     * @param $idMessage
+     * @param bool $onlyCount
+     * @param array $params example ['pageSize' => 5, 'pageNumber' => 2]
+     * @return mixed
+     */
+    public function getStatisticMessageListViews($idMessage, $params = [])
+    {
+        $this->oauth2Autentication();
+        $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/List/Views"], $params), 'https');
+        return json_decode($this->callMethod($url, "GET", null, "JSON"));
+    }
+
+    /**
+     * @param $idMessage
+     * @param bool $onlyCount
+     * @param array $params example ['pageSize' => 5, 'pageNumber' => 2]
+     * @return mixed
+     */
+    public function getStatisticMessageCountViews($idMessage, $params = [])
+    {
+        $this->oauth2Autentication();
+        $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/Count/Views"], $params), 'https');
+        return json_decode($this->callMethod($url, "GET", null, "JSON"));
+    }
+
+    /**
+     * @param $idMessage
+     * @param bool $onlyCount
+     * @param array $params example ['pageSize' => 5, 'pageNumber' => 2]
+     * @return mixed
+     */
+    public function getStatisticMessageListClicks($idMessage, $params = [])
+    {
+        $this->oauth2Autentication();
+        $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/List/Clicks"], $params), 'https');
+        return json_decode($this->callMethod($url, "GET", null, "JSON"));
+    }    
+    
+    /**
+    * @param $idMessage
+    * @param bool $onlyCount
+    * @param array $params example ['pageSize' => 5, 'pageNumber' => 2]
+    * @return mixed
+    */
+   public function getStatisticMessageCountClicks($idMessage, $params = [])
+   {
+       $this->oauth2Autentication();
+       $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/Count/Clicks"], $params), 'https');
+       return json_decode($this->callMethod($url, "GET", null, "JSON"));
+   }
+
+       /**
+     * @param $idMessage
+     * @param bool $onlyCount
+     * @param array $params example ['pageSize' => 5, 'pageNumber' => 2]
+     * @return mixed
+     */
+    public function getStatisticMessageListBounces($idMessage, $params = [])
+    {
+        $this->oauth2Autentication();
+        $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/List/Bounces"], $params), 'https');
+        return json_decode($this->callMethod($url, "GET", null, "JSON"));
+    }    
+    
+    /**
+    * @param $idMessage
+    * @param bool $onlyCount
+    * @param array $params example ['pageSize' => 5, 'pageNumber' => 2]
+    * @return mixed
+    */
+   public function getStatisticMessageCountBounces($idMessage, $params = [])
+   {
+       $this->oauth2Autentication();
+       $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/Count/Bounces"], $params), 'https');
+       return json_decode($this->callMethod($url, "GET", null, "JSON"));
+   }
+
+    /**
+     * @param $idMessage
+     * @param bool $onlyCount
+     * @param array $params example ['pageSize' => 5, 'pageNumber' => 2]
+     * @return mixed
+     */
+    public function getStatisticMessageCountRecipients($idMessage, $params = [])
+    {
+        $this->oauth2Autentication();
+        $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/Count/Recipients"], $params), 'https');
+        return json_decode($this->callMethod($url, "GET", null, "JSON"));
+    }
 
     /**
      * @param $idMessage
@@ -1200,6 +1316,33 @@ class MailUpClient implements ServiceMailDriverInterface
         $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/Email/Sendings/{$idSending}"], []), 'https');
         return json_decode($this->callMethod($url, "DELETE", null, "JSON"));
     }
+
+    /**
+     * @param $list_id
+     * @param $data
+     * @return mixed
+     */
+    public function createSMS($list_id, $data)
+    {
+        $this->oauth2Autentication();
+
+        $url = $this->getConsoleEndpoint() . "/Console/Sms/List/$list_id/Message";
+        $encode_data = json_encode($data);
+        return json_decode($this->callMethod($url, "POST", $encode_data, "JSON"));
+    }
+
+        /**
+     * @param $list_id
+     * @param $data
+     * @return mixed
+     */
+    public function reportSMS($message_id)
+    {
+        $this->oauth2Autentication();
+        $url = $this->getConsoleEndpoint() . "/Console/Sms/$message_id/Sendings/Report";
+        return json_decode($this->callMethod($url, "GET", null, "JSON"));
+    }
+
 
 
 }
