@@ -77,7 +77,8 @@ class ServiceEmailController extends CrudController
                             'enable-disable-dynamic-fields-email',
                             'send-email-to-list',
                             'detail-user',
-                            'update-detail-user'
+                            'update-detail-user',
+                            'copy-message'
                         ],
                         'roles' => ['ADMIN']
                     ],
@@ -235,6 +236,8 @@ class ServiceEmailController extends CrudController
                 \Yii::$app->session->addFlash('success', Module::t('amosnewsletter', 'You have successfully registered to the newsletter'));
                 if (!empty($post['url_redirect'])) {
                     return $this->redirect($post['url_redirect']);
+                } elseif (!empty($model->redirect_url)) {
+                    return $this->redirect($model->redirect_url);
                 }
                 return $this->redirect(Url::previous());
             }
@@ -541,6 +544,32 @@ class ServiceEmailController extends CrudController
             . "<br><strong>Email non processate</strong>: " . implode(', ', $decoded->UnprocessedRecipients));
         return $this->redirect(['email-templates', 'idList' => $idList]);
 
+    }
+
+    /**
+     * @param $idList
+     * @param $idMessage
+     * @return \yii\web\Response
+     */
+    public function actionCopyMessage($idList, $idMessage){
+        $mailServiceClassname = $this->module->mail_service_driver;
+        $mailService = new $mailServiceClassname();
+
+        $decoded = $mailService->getEmail($idList, $idMessage);
+        if (\Yii::$app->request->post()) {
+            $post = \Yii::$app->request->post();
+            $body = [
+                'Subject' => $post['Subject'],
+                'Notes' => $post['Notes'],
+            ];
+        }
+        else {
+            $body = [
+                'Subject' => $decoded->Subject .' (Copy)',
+            ];
+        }
+        $decoded = $mailService->copyMessage($idList, $idMessage, $body);
+        return $this->redirect(['email-templates','idList'=> $idList]);
     }
 
 

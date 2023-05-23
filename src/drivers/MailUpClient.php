@@ -15,6 +15,7 @@ class MailUpClient implements ServiceMailDriverInterface
     var $tokenEndpoint;
     var $consoleEndpoint;
     var $mailstatisticsEndpoint;
+    var $transactionalEndpoint;
 
     var $clientId;
     var $clientSecret;
@@ -45,6 +46,16 @@ class MailUpClient implements ServiceMailDriverInterface
     function setAuthorizationEndpoint($inAuthorizationEndpoint)
     {
         $this->authorizationEndpoint = $inAuthorizationEndpoint;
+    }
+
+    function getTransactionalEndpoint()
+    {
+        return $this->transactionalEndpoint;
+    }
+
+    function setTransactionalEndpoint($endpoint)
+    {
+        $this->transactionalEndpoint = $endpoint;
     }
 
     function getTokenEndpoint()
@@ -134,6 +145,7 @@ class MailUpClient implements ServiceMailDriverInterface
         $this->tokenEndpoint = "https://services.mailup.com/Authorization/OAuth/Token";
         $this->consoleEndpoint = "https://services.mailup.com/API/v1.1/Rest/ConsoleService.svc";
         $this->mailstatisticsEndpoint = "https://services.mailup.com/API/v1.1/Rest/MailStatisticsService.svc";
+        $this->transactionalEndpoint = "https://send.mailup.com/API/v2.0";
 
         $this->module = \Yii::$app->getModule('newsletter');
         if ($this->module) {
@@ -201,8 +213,7 @@ class MailUpClient implements ServiceMailDriverInterface
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($curl, CURLOPT_POST, 1);
 
-        $body = "grant_type=password&username=" . $login . "&password=" . $password . "&client_id=" . $this->clientId . "&client_secret=" . $this->clientSecret;
-
+        $body = "grant_type=password&username=" . $login . "&password=" . urlencode($password) . "&client_id=" . $this->clientId . "&client_secret=" . $this->clientSecret;
         $headers = array();
         $headers["Content-length"] = strlen($body);
         $headers["Accept"] = "application/json";
@@ -316,8 +327,8 @@ class MailUpClient implements ServiceMailDriverInterface
 
     function saveToken()
     {
-        setcookie("access_token", $this->accessToken, time() + 60 * 60 * 24 * 30);
-        setcookie("refresh_token", $this->refreshToken, time() + 60 * 60 * 24 * 30);
+        setcookie("access_token", $this->accessToken, time() + 60 * 60 * 24 * 30,'','',true,true);
+        setcookie("refresh_token", $this->refreshToken, time() + 60 * 60 * 24 * 30,'','',true,true);
     }
 
 
@@ -375,7 +386,8 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param $message_id
      * @param array $params
      */
-    public function updateEmail($list_id, $message_id, $post, $params = []){
+    public function updateEmail($list_id, $message_id, $post, $params = [])
+    {
         $this->oauth2Autentication();
         $params = $this->adjustPageNumber($params);
         $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/List/$list_id/Email/$message_id"], $params), 'https');
@@ -388,13 +400,13 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param $message_id
      * @param array $params
      */
-    public function enableDisableDynamicFieldsEmail($list_id, $message_id, $enable, $params = []){
+    public function enableDisableDynamicFieldsEmail($list_id, $message_id, $enable, $params = [])
+    {
         $this->oauth2Autentication();
         $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/List/$list_id/Email/$message_id/EnableDynamicFields/$enable"], $params), 'https');
         $result = $this->callMethod($url, "PUT", null, "JSON");
         return json_decode($result);
     }
-
 
 
     /**
@@ -410,6 +422,41 @@ class MailUpClient implements ServiceMailDriverInterface
         //params = inGroups=12&notInGroups=89,90
         $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/List/$list_id/Email/$message_id/Send"], $params), 'https');
         $result = $this->callMethod($url, "POST", null, "JSON");
+        return json_decode($result);
+    }
+
+    /**
+     * @param $group_id
+     * @param $message_id
+     * @param array $params
+     * @return mixed
+     */
+    public function sendEmailToGroup($group_id, $message_id, $params = [])
+    {
+        $this->oauth2Autentication();
+        $params = $this->adjustPageNumber($params);
+        $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/Group/$group_id/Email/$message_id/Send"], $params), 'https');
+        $result = $this->callMethod($url, "POST", null, "JSON");
+        return json_decode($result);
+    }
+
+
+
+    /**
+     * @param $message_id
+     * @param $email
+     * @return mixed
+     */
+    public function sendEmailToRecipient($message_id, $email)
+    {
+        $this->oauth2Autentication();
+        $body = [
+            'Email' => $email,
+            'idMessage' => $message_id,
+        ];
+
+        $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/Email/Send"], []), 'https');
+        $result = $this->callMethod($url, "POST", json_encode($body), "JSON");
         return json_decode($result);
     }
 
@@ -483,9 +530,10 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param $data
      * @return mixed
      */
-    public function updateRecipient($recipient_id, $data){
+    public function updateRecipient($recipient_id, $data)
+    {
         $this->oauth2Autentication();
-        $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() ."/Console/Recipient/Detail"], []), 'https');
+        $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/Recipient/Detail"], []), 'https');
         $encode_data = json_encode($data);
         return json_decode($this->callMethod($url, "PUT", $encode_data, "JSON"));
 
@@ -505,6 +553,28 @@ class MailUpClient implements ServiceMailDriverInterface
         $encode_data = json_encode($data);
 
         return json_decode($this->callMethod($url, "POST", $encode_data, "JSON"));
+    }
+
+    /**
+     * @param $params
+     * @return mixed
+     */
+    public function importRecipientsToGroups($users, $group_id, $params = []){
+        $this->oauth2Autentication();
+        $url = $this->getConsoleEndpoint() . "/Console/Group/$group_id/Recipients";
+        $encode_data = json_encode($users);
+        return json_decode($this->callMethod($url, "POST", $encode_data, "JSON"));
+    }
+
+    /**
+     * @param $import_id
+     * @param array $params
+     * @return mixed
+     */
+     public function getImport($import_id, $params = []){
+        $this->oauth2Autentication();
+        $url = $this->getConsoleEndpoint() . "/Console/Import/$import_id";
+        return json_decode($this->callMethod($url, "GET", [], "JSON"));
     }
 
     /**
@@ -566,14 +636,12 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param array $params
      * @return mixed
      */
-    public function getRecipient($recipient_id, $params =[])
+    public function getRecipient($recipient_id, $params = [])
     {
         $this->oauth2Autentication();
-        $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() ."/Console/Recipients/$recipient_id"], $params), 'https');
+        $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/Recipients/$recipient_id"], $params), 'https');
         return json_decode($this->callMethod($url, "GET", null, "JSON"));
     }
-
-
 
 
     /**
@@ -610,6 +678,20 @@ class MailUpClient implements ServiceMailDriverInterface
     }
 
     /**
+     * @param $idList
+     * @param $data ['Name' => 'NOME_GROUPPO', 'Notes' => 'MY_NOTES']
+     * @return mixed
+     */
+    public function createGroup($idList, $data){
+        $this->oauth2Autentication();
+        $url = $this->getConsoleEndpoint() . "/Console/List/$idList/Group";
+        $encode_data = json_encode($data);
+
+        return json_decode($this->callMethod($url, "POST", $encode_data, "JSON"));
+    }
+
+
+    /**
      * @return mixed
      */
     public function getDynamicFields($params = [])
@@ -622,6 +704,40 @@ class MailUpClient implements ServiceMailDriverInterface
         return json_decode($this->callMethod($url, "GET", null, "JSON"));
     }
 
+
+    /**
+     * @param $list_id
+     * @param $message_id
+     * @param $data
+     * @return mixed
+     */
+    public function copyMessage($list_id, $message_id, $data)
+    {
+        $this->oauth2Autentication();
+        $url = $this->getConsoleEndpoint() . "/Console/List/$list_id/Email/$message_id";
+        $encode_data = json_encode($data);
+
+        return json_decode($this->callMethod($url, "POST", $encode_data, "JSON"));
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getTags($list_id, $params = [])
+    {
+        $this->oauth2Autentication();
+        $defaultParams = ['PageSize' => 50];
+        $params = ArrayHelper::merge($defaultParams, $params);
+        $params = $this->adjustPageNumber($params);
+        $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/List/$list_id/Tags"], $params), 'https');
+        return json_decode($this->callMethod($url, "GET", null, "JSON"));
+    }
+
+
+
+
+
+    //------------ EMAIL STATISTICS -------------------------
 
     /**
      * @return mixed
@@ -641,7 +757,8 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param $idMessage
      * @param array $params
      */
-    public function getEmailSendHistory($list_id, $message_id, $params = []){
+    public function getEmailSendHistory($list_id, $message_id, $params = [])
+    {
         $this->oauth2Autentication();
         $defaultParams = ['PageSize' => 50, 'orderby' => 'Id asc'];
         $params = ArrayHelper::merge($defaultParams, $params);
@@ -655,7 +772,8 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param array $params
      * @return mixed
      */
-    public function getEmailRecipients($idMessage, $params = []){
+    public function getEmailRecipients($idMessage, $params = [])
+    {
         $this->oauth2Autentication();
 //        $defaultParams = ['PageSize' => 50, 'orderby' => 'Id asc'];
 //        $params = ArrayHelper::merge($defaultParams, $params);
@@ -670,15 +788,15 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param array $params
      * @return mixed
      */
-    public function getStatisticOpened($idMessage, $onlyCount = true, $params = []){
+    public function getStatisticOpened($idMessage, $onlyCount = true, $params = [])
+    {
         $this->oauth2Autentication();
 //        $defaultParams = ['PageSize' => 50, 'orderby' => 'Id asc'];
 //        $params = ArrayHelper::merge($defaultParams, $params);
         $params = $this->adjustPageNumber($params);
-        if($onlyCount){
+        if ($onlyCount) {
             $type = 'Count';
-        }
-        else {
+        } else {
             $type = 'List';
         }
         $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/$type/Views"], $params), 'https');
@@ -691,15 +809,15 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param array $params
      * @return mixed
      */
-    public function getStatisticClicks($idMessage, $onlyCount = true, $params = []){
+    public function getStatisticClicks($idMessage, $onlyCount = true, $params = [])
+    {
         $this->oauth2Autentication();
 //        $defaultParams = ['PageSize' => 50, 'orderby' => 'Id asc'];
 //        $params = ArrayHelper::merge($defaultParams, $params);
         $params = $this->adjustPageNumber($params);
-        if($onlyCount){
+        if ($onlyCount) {
             $type = 'Count';
-        }
-        else {
+        } else {
             $type = 'List';
         }
         $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/$type/Clicks"], $params), 'https');
@@ -713,15 +831,15 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param array $params
      * @return mixed
      */
-    public function getStatisticClickedLinks($idMessage, $onlyCount = true, $params = []){
+    public function getStatisticClickedLinks($idMessage, $onlyCount = true, $params = [])
+    {
         $this->oauth2Autentication();
 //        $defaultParams = ['PageSize' => 50, 'orderby' => 'Id asc'];
 //        $params = ArrayHelper::merge($defaultParams, $params);
         $params = $this->adjustPageNumber($params);
-        if($onlyCount){
+        if ($onlyCount) {
             $type = 'UrlClicks';
-        }
-        else {
+        } else {
             $type = 'UrlClickDetails';
         }
         $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/List/$type"], $params), 'https');
@@ -735,15 +853,15 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param array $params
      * @return mixed
      */
-    public function getStatisticBounces($idMessage, $onlyCount = true, $params = []){
+    public function getStatisticBounces($idMessage, $onlyCount = true, $params = [])
+    {
         $this->oauth2Autentication();
 //        $defaultParams = ['PageSize' => 50, 'orderby' => 'Id asc'];
 //        $params = ArrayHelper::merge($defaultParams, $params);
         $params = $this->adjustPageNumber($params);
-        if($onlyCount){
+        if ($onlyCount) {
             $type = 'Count';
-        }
-        else {
+        } else {
             $type = 'List';
         }
         $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/$type/Bounces"], $params), 'https');
@@ -756,15 +874,15 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param array $params
      * @return mixed
      */
-    public function getStatisticUnsubscribed($idMessage, $onlyCount = true, $params = []){
+    public function getStatisticUnsubscribed($idMessage, $onlyCount = true, $params = [])
+    {
         $this->oauth2Autentication();
 //        $defaultParams = ['PageSize' => 50, 'orderby' => 'Id asc'];
 //        $params = ArrayHelper::merge($defaultParams, $params);
         $params = $this->adjustPageNumber($params);
-        if($onlyCount){
+        if ($onlyCount) {
             $type = 'Count';
-        }
-        else {
+        } else {
             $type = 'List';
         }
         $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Message/$idMessage/$type/Unsubscriptions"], $params), 'https');
@@ -772,47 +890,46 @@ class MailUpClient implements ServiceMailDriverInterface
     }
 
 
-
-
     /**
      * @param $idMessage
      * @param bool $onlyCount
      * @param array $params
      * @return mixed
      */
-    public function getStatisticRecipientDeliveries($idRecipient, $idMessage = null, $onlyCount = true, $params = []){
+    public function getStatisticRecipientDeliveries($idRecipient, $idMessage = null, $onlyCount = true, $params = [])
+    {
         $this->oauth2Autentication();
-        if($idMessage) {
+        if ($idMessage) {
             $defaultParams = ['filterby' => 'IdMessage==' . $idMessage];
             $params = ArrayHelper::merge($defaultParams, $params);
         }
         $params = $this->adjustPageNumber($params);
-        if($onlyCount){
+        if ($onlyCount) {
             $type = 'Count';
-        }
-        else {
+        } else {
             $type = 'List';
         }
         $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Recipient/$idRecipient/$type/Deliveries"], $params), 'https');
         return json_decode($this->callMethod($url, "GET", null, "JSON"));
     }
+
     /**
      * @param $idMessage
      * @param bool $onlyCount
      * @param array $params
      * @return mixed
      */
-    public function getStatisticRecipientOpened($idRecipient, $idMessage = null, $onlyCount = true, $params = []){
+    public function getStatisticRecipientOpened($idRecipient, $idMessage = null, $onlyCount = true, $params = [])
+    {
         $this->oauth2Autentication();
-        if($idMessage) {
+        if ($idMessage) {
             $defaultParams = ['filterby' => 'IdMessage==' . $idMessage];
             $params = ArrayHelper::merge($defaultParams, $params);
         }
         $params = $this->adjustPageNumber($params);
-        if($onlyCount){
+        if ($onlyCount) {
             $type = 'Count';
-        }
-        else {
+        } else {
             $type = 'List';
         }
         $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Recipient/$idRecipient/$type/Views"], $params), 'https');
@@ -825,17 +942,17 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param array $params
      * @return mixed
      */
-    public function getStatisticRecipientClicks($idRecipient, $idMessage = null, $onlyCount = true, $params = []){
+    public function getStatisticRecipientClicks($idRecipient, $idMessage = null, $onlyCount = true, $params = [])
+    {
         $this->oauth2Autentication();
-        if($idMessage) {
+        if ($idMessage) {
             $defaultParams = ['filterby' => 'IdMessage==' . $idMessage];
             $params = ArrayHelper::merge($defaultParams, $params);
         }
         $params = $this->adjustPageNumber($params);
-        if($onlyCount){
+        if ($onlyCount) {
             $type = 'Count';
-        }
-        else {
+        } else {
             $type = 'List';
         }
         $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Recipient/$idRecipient/$type/Clicks"], $params), 'https');
@@ -849,17 +966,17 @@ class MailUpClient implements ServiceMailDriverInterface
      * @param array $params
      * @return mixed
      */
-    public function getStatisticRecipientBounces($idRecipient, $idMessage = null, $onlyCount = true, $params = []){
+    public function getStatisticRecipientBounces($idRecipient, $idMessage = null, $onlyCount = true, $params = [])
+    {
         $this->oauth2Autentication();
-        if($idMessage) {
+        if ($idMessage) {
             $defaultParams = ['filterby' => 'IdMessage==' . $idMessage];
             $params = ArrayHelper::merge($defaultParams, $params);
         }
         $params = $this->adjustPageNumber($params);
-        if($onlyCount){
+        if ($onlyCount) {
             $type = 'Count';
-        }
-        else {
+        } else {
             $type = 'List';
         }
         $url = Url::toRoute(ArrayHelper::merge([$this->getMailstatisticsEndpoint() . "/Recipient/$idRecipient/$type/Bounces"], $params), 'https');
@@ -977,6 +1094,111 @@ class MailUpClient implements ServiceMailDriverInterface
             $params['PageNumber'] = $params['PageNumber'] - 1;
         }
         return $params;
+    }
+
+
+    /**
+     * @return array
+     */
+    public function getSmtpPlusCredential()
+    {
+        $module = \Yii::$app->getModule('newsletter');
+        $credentials = [];
+        if ($module) {
+            $username = $module->SMTP_username;
+            $password = $module->SMTP_password;
+            $credentials = [
+                "Username" => $username,
+                "Secret" => $password
+            ];
+        }
+        return $credentials;
+    }
+
+    /**
+     * @param $params
+     * @return mixed
+     */
+    public function getOngoingSending( $params = []){
+        $this->oauth2Autentication();
+        $defaultParams = ['PageSize' => 50];
+//        if($idSending){
+//            $defaultParams['filterby'] = "\"IdMessage==$idSending\"";
+//        }
+        $params = ArrayHelper::merge($defaultParams, $params);
+        $params = $this->adjustPageNumber($params);
+        $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/Email/Sendings/Immediate"], $params), 'https');
+        return json_decode($this->callMethod($url, "GET", null, "JSON"));
+    }
+
+    /**
+     * @param $params
+     * @return mixed
+     */
+    public function getWaitingSending($params = []){
+        $defaultParams = ['PageSize' => 50];
+        $params = ArrayHelper::merge($defaultParams, $params);
+        $params = $this->adjustPageNumber($params);
+        $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/Email/Sendings/Deferred"], $params), 'https');
+        return json_decode($this->callMethod($url, "GET", null, "JSON"));
+    }
+
+    /**
+     * @param $idSending
+     * @param $params
+     * @return mixed
+     */
+    public function getFirstAvailableSendingDate($idSending, $params){
+        $defaultParams = ['PageSize' => 50];
+        $params = ArrayHelper::merge($defaultParams, $params);
+        $params = $this->adjustPageNumber($params);
+        $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/Email/Sending/{$idSending}/Deferred"], $params), 'https');
+        return json_decode($this->callMethod($url, "GET", null, "JSON"));
+    }
+
+    /**
+     * @param $template_id
+     * @param $subject
+     * @param $content
+     * @param $user
+     */
+    public function sendTransationalEmail($template_id, $subject, $content, $user)
+    {
+        $url = Url::toRoute(ArrayHelper::merge([$this->getTransactionalEndpoint() . "/messages/sendtemplate"], []), 'https');
+
+        $credentials = self::getSmtpPlusCredential();
+        $body = [
+            'TemplateId' => $template_id,
+            'Subject' => $subject,
+            "From" => ["Name" => "Piattaforma eventi", "Email" => "michele.lafrancesca@open20.it"],
+            "To" => [["Name" => $user['name'], "Email" => $user['email']]],
+            "Cc" => [],
+            "Bcc" => [],
+            "ReplyTo" => null,
+            "CharSet" => "utf-8",
+            "ExtendedHeaders" => null,
+            "Attachments" => null,
+            "EmbeddedImages" => null,
+            "XSmtpAPI" => [
+                "DynamicFields" => [
+                    ["N" => "content", "V" => $content],
+                ],
+            ],
+
+        ];
+        $body['User'] = $credentials;
+        return json_decode($this->callMethod($url, "POST", json_encode($body), "JSON"));
+
+    }
+
+       /**
+     * @param $idSending
+     * @param $params
+     * @return mixed
+     */
+    public function stopSending($idSending){
+        $url = Url::toRoute(ArrayHelper::merge([$this->getConsoleEndpoint() . "/Console/Email/Sendings/{$idSending}"], []), 'https');
+        return json_decode($this->callMethod($url, "DELETE", null, "JSON"));
     }
 
 

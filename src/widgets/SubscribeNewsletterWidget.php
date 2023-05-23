@@ -9,6 +9,7 @@ use amos\newsletter\models\Newsletter;
 use amos\newsletter\utility\NewsletterUtility;
 use yii\base\InvalidConfigException;
 use yii\base\Widget;
+use yii\helpers\Url;
 
 class SubscribeNewsletterWidget extends Widget
 {
@@ -31,7 +32,9 @@ class SubscribeNewsletterWidget extends Widget
     public $service_mail_dynamic_fields = [ 1 => 'Nome', 2 => 'Cognome'];
 
     public $enableName = false;
+    public $hideNewsletterName = false;
     public $pathPrivacy = '@backend/views/site/privacy';
+    public $subscribeBtnAdditionalClasses = '';
 
     /** @var string url of redirect after the action of subscribtion */
     public $redirect_url = '@vendor/amos/newsletter/src/widgets/views/thankyou_newsletter';
@@ -91,7 +94,8 @@ class SubscribeNewsletterWidget extends Widget
 			$classModel = $module->customModel;
 			$model = new $classModel;
 		} else {
-        $model = new FormSubscribeNewsletter();
+            $model = new FormSubscribeNewsletter();
+            $model->redirect_url = $this->redirect_url;
 		}
         return $this->render($this->pathFormNewsletter, ['model' =>$model, 'widget' => $this, 'newsletter' => $this->newsletter]);
     }

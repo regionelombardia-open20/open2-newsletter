@@ -48,8 +48,8 @@ class Module extends AmosModule
      */
     public $client_secret = "f1e4dbd1-2cd1-4e69-a449-09a988012602";
 
-    public $customModel = 'app\models\FormSubscribeNewsletter';
-//    public $customModel = 'backend\models\FormSubscribeNewsletter';
+//    public $customModel = 'app\models\FormSubscribeNewsletter';
+    public $customModel = 'backend\models\FormSubscribeNewsletter';
     /**
      * @var string
      */
@@ -58,14 +58,17 @@ class Module extends AmosModule
     /**
      * @var string
      */
-//    public $username = "m35139";
-    public $username = "m127571";
+    public $username = "";
+//    public $username = "m127571";
 
     /**
      * @var string
      */
- //   public $password = "TestElite1234!";
-    public $password = "ersaf2019";
+    public $password = "!";
+//    public $password = "ersaf2019";
+
+    public $SMTP_username = '';
+    public $SMTP_password = '';
 
     /**
      * @var string
@@ -82,10 +85,9 @@ class Module extends AmosModule
      */
     public $enableCreateTemplateNewsletter = false;
 
-    public $fieldIdsSubscribersGridView = [ 1 => 'Name', 2 => 'Surname'];
+    public $fieldIdsSubscribersGridView = [1 => 'Name', 2 => 'Surname'];
 
     public $confirmEmail = false;
-
 
 
     /**

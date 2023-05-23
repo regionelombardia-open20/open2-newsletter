@@ -85,7 +85,22 @@ $this->params['breadcrumbs'][] = $this->title; ?>
             [
                 'attribute' => 'StartDate',
                 'label' => Module::t('amosnewsletter', 'Sending date'),
-                'format' => 'datetime'
+                'value' => function ($model) {
+                    if ($model->StartDate) {
+                        $date = new \DateTime($model->StartDate);
+                        return $date->format('d M Y H:i:s');
+                    }
+                },
+            ],
+            [
+                'attribute' => 'EndDate',
+                'label' => Module::t('amosnewsletter', 'Sending end date'),
+                'value' => function ($model) {
+                    if ($model->EndDate) {
+                        $date = new \DateTime($model->EndDate);
+                        return $date->format('d M Y H:i:s');
+                    }
+                },
             ],
         ]
 
@@ -104,7 +119,7 @@ $this->params['breadcrumbs'][] = $this->title; ?>
                 'class' => \open20\amos\core\views\grid\ActionColumn::className(),
                 'template' => '{statistics}',
                 'buttons' => [
-                    'statistics' => function ($url, $model){
+                    'statistics' => function ($url, $model) {
                         return \yii\helpers\Html::a(\open20\amos\core\icons\AmosIcons::show('file'),
                             [
                                 'recipient-statistics', 'idRecipient' => $model->IdRecipient, 'idMessage' => $model->IdMessage

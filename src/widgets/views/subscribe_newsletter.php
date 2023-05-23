@@ -9,7 +9,7 @@ use \open20\amos\core\forms\ActiveForm;
         'action' => ['/newsletter/service-email/subscribe-to-group', 'idGroup' => $widget->id_service_mail_group]
     ]);
     ?>
-    <?php if (!empty($newsletter)) { ?>
+    <?php if (!empty($newsletter) && !$widget->hideNewsletterName) { ?>
         <h3><?= $newsletter->name ?></h3>
     <?php } ?>
 
@@ -34,7 +34,7 @@ use \open20\amos\core\forms\ActiveForm;
         </div>
 
         <div class="newsletter-button">
-            <?= \yii\helpers\Html::submitButton(\amos\newsletter\Module::t('amosnewsletter', 'Iscriviti'), ['class' => 'btn btn-navigation-primary']) ?>
+            <?= \yii\helpers\Html::submitButton(\amos\newsletter\Module::t('amosnewsletter', 'Iscriviti'), ['class' => 'btn btn-navigation-primary ' . $widget->subscribeBtnAdditionalClasses]) ?>
         </div>
 
     </div>

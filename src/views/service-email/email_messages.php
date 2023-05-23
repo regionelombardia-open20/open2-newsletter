@@ -23,6 +23,10 @@ $this->params['breadcrumbs'][] = $this->title;
             'label' => Module::t('amosnewsletter', 'Subject')
         ],
         [
+            'attribute' => 'Notes',
+            'label' => Module::t('amosnewsletter', 'Notes')
+        ],
+        [
             'attribute' => 'CreationDate',
             'format' => 'datetime',
             'label' => Module::t('amosnewsletter', 'Creation Date')
@@ -30,7 +34,7 @@ $this->params['breadcrumbs'][] = $this->title;
         ],
         [
             'class' => \open20\amos\core\views\grid\ActionColumn::className(),
-            'template' => '{statistics}{view}{update}{send}',
+            'template' => '{statistics}{view}{update}{copy}{send}',
             'buttons' => [
                 'view' => function ($url, $model) use ($idGroup) {
                     return \yii\helpers\Html::a(\open20\amos\core\icons\AmosIcons::show('file'),
@@ -51,6 +55,14 @@ $this->params['breadcrumbs'][] = $this->title;
                         ['email-update', 'idList' => $model->idList, 'idMessage' => $model->idMessage], [
                             'class' => 'btn btn-tools-secondary',
                             'title' => Module::t('amosnewsletter', "Update")
+                        ]);
+                },
+                'copy' => function ($url, $model) {
+                    return \yii\helpers\Html::a(\open20\amos\core\icons\AmosIcons::show('copy'),
+                        ['copy-message', 'idList' => $model->idList, 'idMessage' => $model->idMessage], [
+                            'class' => 'btn btn-tools-secondary',
+                            'title' => Module::t('amosnewsletter', "Copy"),
+                            'data-confirm' => 'Vuoi copiare il messaggio?'
                         ]);
                 },
                 'send' => function ($url, $model) use ($idGroup) {

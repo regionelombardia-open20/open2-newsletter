@@ -59,5 +59,6 @@ return [
     'Deliveries' => 'Spedite',
     'Detail Recipient' => 'Dettagli utente',
     'Recipient statistic' => 'Statistiche utente',
-    'Subscribe' => 'Iscriviti'
+    'Subscribe' => 'Iscriviti',
+    'You have successfully registered to the newsletter' => 'Iscrizione alla newsletter avvenuta con successo',
 ];
